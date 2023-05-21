@@ -2,9 +2,9 @@ const express = require("express");
 const env = require("dotenv");
 const app = express();
 const mongoose = require("mongoose");
-const routes = require("./routes");
+const routes = require("./src/routes");
 const cors = require("cors");
-const bodyParser = require("body-parser")
+const bodyParser = require("body-parser");
 
 env.config();
 mongoose
@@ -21,10 +21,10 @@ mongoose
 
 app.use(cors());
 app.use(express.json());
-app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
-app.use(bodyParser.json({limit: '50mb', extended: true}));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+app.use(bodyParser.json({ limit: "50mb", extended: true }));
 
-require("./models");
+require("./src/models");
 app.use("/api", routes);
 
 const port = process.env.PORT || 5000;
