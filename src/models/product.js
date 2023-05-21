@@ -7,6 +7,34 @@ const productSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    publishingYear: {
+      type: Number,
+      required: true
+    },
+    publishingDate: {
+      type: Date
+    },
+    language: {
+      type: String,
+      required: true
+    },
+    pages: {
+      type: Number,
+      required: true
+    },
+    publisher: {
+      type: String,
+      required: true
+    },
+    form: {
+      type: String,
+      enum: ['Bìa Mềm', 'Bìa Cứng'],
+      required: true
+    },
+    author: {
+      type: String,
+      required: true
+    },
     slug: {
       type: String,
       required: true,
@@ -15,6 +43,7 @@ const productSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: true,
+      min: 0
     },
     discountPercent: {
       type: Number,
@@ -33,6 +62,7 @@ const productSchema = new mongoose.Schema(
       {
         rating: { type: Number, required: true },
         comment: { type: String, required: true },
+        like: { type: Number, required: true },
         user: {
           type: mongoose.Schema.Types.ObjectId,
           required: true,

@@ -2,9 +2,22 @@ const { Product, Category } = require("../models");
 const shortid = require("shortid");
 const slugify = require("slugify");
 const cloudinary = require("cloudinary");
+const { getLabel } = require("../services/ai-image");
 
 exports.addProduct = (req, res) => {
-  const { name, price, description, category, quantity } = req.body;
+  const {
+    name,
+    publishingYear,
+    language,
+    pages,
+    publisher,
+    form,
+    author,
+    price,
+    description,
+    category,
+    quantity,
+  } = req.body;
   let productPictures = [];
 
   if (req.files.length > 0) {
@@ -13,7 +26,13 @@ exports.addProduct = (req, res) => {
     });
   }
   const product = new Product({
-    name: name,
+    name,
+    publishingYear,
+    language,
+    pages,
+    publisher,
+    form,
+    author,
     slug: `${slugify(name)}-${shortid.generate()}`,
     price,
     description,
@@ -137,6 +156,30 @@ exports.getProductDetailsBySlug = (req, res) => {
   }
 };
 
+exports.getProductByCategoryName = (req, res) => {
+  const { categoryName } = req.params;
+  if (categoryName) {
+    Category.findOne({ name: categoryName }).then((category) => {
+      if (!category) {
+        // Category not found, return an empty array of products
+        return [];
+      }
+      return Product.find({ category: category._id })
+        .populate("category") // Populate the category field in the product documents
+        .exec((error, product) => {
+          if (error) return res.status(400).json({ error });
+          if (product) {
+            res.status(200).json({ product });
+          } else {
+            res.status(400).json({ error: "something went wrong" });
+          }
+        });
+    });
+  } else {
+    res.status(400).json({ error: "Params required" });
+  }
+};
+
 exports.deleteProductById = (req, res) => {
   const { productId } = req.body;
   if (productId) {
@@ -153,6 +196,31 @@ exports.deleteProductById = (req, res) => {
   } else {
     return res.status(400).json({ error: "Params required" });
   }
+};
+
+exports.getProductsByPages = (req, res) => {
+  const { from, to } = req.body;
+  const query = {};
+
+  if (from && to) {
+    query.pages = { $gte: from, $lte: to };
+  } else if (from) {
+    query.pages = { $gte: from };
+  } else if (to) {
+    query.pages = { $lte: to };
+  } else {
+    return res.status(400).json({ error: "Params required" });
+  }
+  Product.find(query)
+    .populate("category")
+    .exec()
+    .then((products) => {
+      res.send(products);
+    })
+    .catch((error) => {
+      console.error(error);
+      res.status(500).send("Internal server error");
+    });
 };
 
 exports.enableProductById = (req, res) => {
@@ -301,22 +369,18 @@ exports.addProductReview = (req, res) => {
   });
 };
 
-exports.getNewestProduct = async (req, res) => {
-  let products = await Product.find({ isDisabled: { $eq: false } })
-    .populate({ path: "category", select: "_id name categoryImage" })
-    .limit(10)
-    .sort({ createdAt: -1 });
-  return res.status(200).json({ success: true, code: 200, products });
-};
-
-exports.updateDiscountPercentByCategory = (req, res) => {
-  const { _id, discountPercent } = req.body;
-  Product.updateMany({ category: _id }, { $set: { discountPercent } }).exec(
-    (error, result) => {
-      if (error) return res.status(400).json({ error });
-      res.status(202).json({ result });
-    }
-  );
+exports.searchProductByImage = async (req, res) => {
+  try {
+    const { buffer, mimetype, originalname } = req.file;
+    console.log("imageBuffer: ", req.file);
+    const label = await getLabel(buffer);
+    res.status(200).json({ title: label });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while processing the image" });
+  }
 };
 
 // Example update status product
@@ -324,3 +388,13 @@ exports.updateDiscountPercentByCategory = (req, res) => {
 //   .then(dbModel => res.json(dbModel))
 //   .catch(err => res.status(422).json(err));
 //  },
+
+async function uploadToCloudinary(image) {
+  try {
+    const result = await cloudinary.v2.uploader.upload(image);
+    console.log("result: ", result);
+    return result.secure_url;
+  } catch (error) {
+    console.error(error);
+  }
+}

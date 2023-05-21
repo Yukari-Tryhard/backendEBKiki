@@ -1,4 +1,5 @@
 const express = require("express");
+const multer = require('multer');
 const {
   addProduct,
   getProductById,
@@ -13,8 +14,9 @@ const {
   deleteProductByCateId,
   enableProductByCateId,
   getProductsDisable,
-  getNewestProduct,
-  updateDiscountPercentByCategory,
+  searchProductByImage,
+  getProductsByPages,
+  getProductByCategoryName
 } = require("../controllers/product");
 const {
   requireSignin,
@@ -22,6 +24,7 @@ const {
   userMiddleware,
   uploadCloud,
 } = require("../common-middleware");
+const upload = multer();
 const router = express.Router();
 
 router.post(
@@ -32,7 +35,6 @@ router.post(
   addProduct
 );
 router.get("/getProducts", getProducts);
-router.get("/getNewestProducts", getNewestProduct);
 router.post("/getProductDisable", getProductsDisable);
 router.post(
   "/addProductReview",
@@ -47,9 +49,12 @@ router.post(
   adminMiddleware,
   uploadCloud.array("productPictures"),
   updateProduct
-);
-router.post("/searchByProductName", searchByProductName);
+  );
+  router.post("/searchByProductName", searchByProductName);
+  router.post("/searchByImage",  upload.single('image'), searchProductByImage)
 router.get("/getProductsByCategory/:categoryId", getProductByCategory);
+router.get("/getProductsByPages", getProductsByPages);
+router.get("/getProductsByCategoryName/:categoryName", getProductByCategoryName);
 router.post(
   "/deleteByCategory",
   requireSignin,
@@ -76,12 +81,7 @@ router.post(
   adminMiddleware,
   enableProductById
 );
-router.post(
-  "/updateDiscountPercent",
-  requireSignin,
-  adminMiddleware,
-  updateDiscountPercentByCategory
-);
+
 router.get("/:slug", getProductDetailsBySlug);
 
 module.exports = router;

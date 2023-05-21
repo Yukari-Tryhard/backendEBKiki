@@ -1,10 +1,9 @@
-const { User, Otp } = require("../models");
+const { User } = require("../models");
 const bcrypt = require("bcrypt");
 const { OAuth2Client } = require("google-auth-library");
 const client_id = process.env.GOOGLE_CLIENT_ID;
 const client = new OAuth2Client(client_id);
 const jwt = require("jsonwebtoken");
-const { sendOtp } = require("../services/mailer");
 
 const generateJwtToken = (_id, email, role) => {
   return jwt.sign({ _id, email, role }, process.env.JWT_SECRET, {
@@ -131,55 +130,6 @@ exports.isUserLoggedIn = async (req, res) => {
     const { _id, name, email, role, profilePicture } = userObj;
     const user = { _id, name, email, role, profilePicture };
     res.status(200).json({ user });
-  } catch (error) {
-    res.status(400).json({ error });
-  }
-};
-
-exports.updateForgetPassword = async (req, res) => {
-  const { otp, password, email } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (user) {
-      const otpObj = await Otp.findOne({
-        user: user._id,
-        generatedOtp: otp,
-      });
-      if (otpObj) {
-        const hashPassword = await bcrypt.hash(password, 10);
-        const userObj = await User.findOneAndUpdate(
-          { email },
-          { password: hashPassword },
-          { upsert: true }
-        );
-        if (userObj) {
-          res.status(202).json({ message: "Updated successfully" });
-        } else {
-          res.status(400).json({ error: "Something went wrong" });
-        }
-      } else {
-        return res.status(400).json({ error: "OTP is wrong" });
-      }
-    } else {
-      return res.status(400).json({ error: "Email does not exists" });
-    }
-  } catch (error) {
-    res.status(400).json({ error });
-  }
-};
-
-exports.sendOtpToEmail = async (req, res) => {
-  const { email } = req.body;
-  try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      await sendOtp(email, otp);
-      await Otp.create({ user: existingUser._id, generatedOtp: otp });
-      res.status(201).json({ message: "Otp sent to email successfully" });
-    } else {
-      res.status(400).json({ error: "Email does not exists" });
-    }
   } catch (error) {
     res.status(400).json({ error });
   }
